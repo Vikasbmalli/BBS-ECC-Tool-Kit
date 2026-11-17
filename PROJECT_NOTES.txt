@@ -1,0 +1,23 @@
+PROJECT 1: BLUM BLUM SHUB
+Module: 2 - Pseudorandom Number Generators
+Input: p, q, seed, number of bits
+Output: generated binary sequence and demonstration states
+Main formula:
+    n = p * q
+    x0 = seed^2 mod n
+    xi = (x(i-1))^2 mod n
+    output bit = least significant bit of xi
+
+PROJECT 2: ELLIPTIC CURVE CRYPTOGRAPHY
+Module: 2 - Public Key Cryptography / Elliptic Curve Cryptography
+Input: plaintext message
+Output: Alice/Bob public keys, matching ECDH shared secret, ciphertext, decrypted message
+Workflow:
+    Generate Alice and Bob ECC key pairs
+    Exchange public keys
+    Compute ECDH shared secret on both sides
+    Derive AES key with HKDF-SHA256
+    Encrypt/decrypt using AES-GCM
+
+For a classroom presentation, explain that ECDH is the key-agreement step;
+AES-GCM performs the actual message encryption.

@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Modulo Crypto Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: every page sits on a full-bleed, route-specific background plate (curve, chord, bit-matrix artwork).
+   Content lives on frosted-glass panels with crop-mark corners. Floating pill menu bar. Single committed look: pine, saffron, ember. */
+:root{
+  --bg:#06201c; --glass:rgba(8,34,30,.68); --glass2:rgba(255,255,255,.06); --line:rgba(244,185,66,.24);
+  --fg:#eaf5f0; --muted:#9fc0b5; --accent:#f4b942; --accent-fg:#1b1405; --ember:#ff7a59;
+  --good:#62d493; --good-soft:rgba(98,212,147,.16); --bad:#ff8b78; --bad-soft:rgba(255,139,120,.16);
+  --bit0:rgba(255,255,255,.11); --field:rgba(0,0,0,.3);
+  --display:'Syne',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --body:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);margin:0}
+h1,h2,h3{font-family:var(--display);margin:0;letter-spacing:-.015em;text-wrap:balance}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#scene,#rain{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+#scene{z-index:-1}#rain{z-index:0}
+#auth,#app{position:relative;z-index:1}
+.pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.logo{display:inline-flex;align-items:center;gap:10px;font:800 21px var(--display);letter-spacing:-.03em;text-decoration:none;color:var(--fg)}
+.logo svg{width:32px;height:34px;flex:none;color:var(--accent)}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+
+/* glass plate with crop marks */
+.glass{position:relative;background:var(--glass);backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);border:1px solid var(--line);border-radius:4px;min-width:0}
+.glass::before,.glass::after{content:"";position:absolute;width:14px;height:14px;border:2px solid var(--accent);pointer-events:none}
+.glass::before{left:-1px;top:-1px;border-right:0;border-bottom:0}
+.glass::after{right:-1px;bottom:-1px;border-left:0;border-top:0}
+
+/* ---------- auth ---------- */
+#auth{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:center;gap:32px;max-width:1200px;margin:0 auto;padding-block:32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.pitch .logo{margin-bottom:12vh}
+.pitch h1{font-size:clamp(36px,5.6vw,72px);line-height:1;margin-bottom:18px;max-width:11ch}
+.pitch h1 em{font-style:normal;color:var(--accent)}
+.pitch p{color:var(--muted);max-width:44ch;margin:0;font-size:16px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:24px}
+.chips span{font:500 12px var(--mono);border:1px solid var(--line);color:var(--fg);padding:4px 10px;background:var(--glass2)}
+.card{width:100%;max-width:440px;margin:0 auto;padding:30px}
+.card h2{font-size:30px;margin-bottom:6px}
+.card .sub{color:var(--muted);margin:0 0 22px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.inp{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:2px;background:var(--field);font-size:15px}
+.inp::placeholder{color:color-mix(in srgb,var(--muted) 60%,transparent)}
+.inp.mono{font:500 14px var(--mono)}
+.inp:disabled{opacity:.6}
+select.inp option{background:#0b2824;color:var(--fg)}
+.pw{position:relative}.pw .inp{padding-right:64px}
+.pw button{position:absolute;right:6px;top:6px;bottom:6px;border:0;background:none;color:var(--muted);font:600 12px var(--mono);cursor:pointer;padding:0 8px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row2.keep{grid-template-columns:1fr 1fr}
+@media (max-width:520px){.row2:not(.keep){grid-template-columns:1fr}}
+.btn{display:inline-flex;justify-content:center;align-items:center;gap:8px;padding:11px 20px;border-radius:2px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg);font-weight:800;letter-spacing:.02em;cursor:pointer;text-decoration:none}
+.btn.full{width:100%}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.danger{background:transparent;border-color:var(--bad);color:var(--bad)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:active{transform:translateY(1px)}
+.err,.okmsg{border-radius:2px;padding:10px 12px;font-size:13px;margin-bottom:14px}
+.err{background:var(--bad-soft);color:var(--bad);border-left:3px solid var(--bad)}
+.okmsg{background:var(--good-soft);color:var(--good);border-left:3px solid var(--good)}
+.alt{margin-top:18px;font-size:14px;color:var(--muted);text-align:center}
+.alt a{color:var(--accent);font-weight:700}
+.or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;margin:16px 0}
+.or::before,.or::after{content:"";height:1px;background:var(--line);flex:1}
+.meter{display:flex;gap:4px;margin-top:6px}.meter i{flex:1;height:4px;background:rgba(255,255,255,.14)}
+.meter i.on1{background:var(--bad)}.meter i.on2{background:var(--ember)}.meter i.on3{background:var(--accent)}.meter i.on4{background:var(--good)}
+.hint{font-size:12px;color:var(--muted);margin-top:5px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:13px;margin:6px 0 16px;color:var(--muted)}
+.check input{margin-top:3px;accent-color:var(--accent)}
+@media (max-width:860px){
+  #auth{grid-template-columns:minmax(0,1fr);align-items:start;gap:22px}
+  .pitch .logo{margin-bottom:28px}.pitch h1{font-size:40px}.chips{display:none}
+  .card{padding:22px}
+}
+
+/* ---------- app shell: floating pill menu ---------- */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:40;background:var(--bg)}
+#barwrap{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:30;max-width:1120px;margin:12px auto 0}
+#bar{display:flex;align-items:center;gap:18px;min-height:56px;padding:6px 10px 6px 20px;border-radius:99px;background:var(--glass);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);border:1px solid var(--line);position:relative}
+nav{display:flex;gap:2px;flex:1;justify-content:center}
+nav a{color:var(--muted);text-decoration:none;font-weight:700;font-size:14px;padding:8px 16px;border-radius:99px}
+nav a:hover{color:var(--fg)}
+nav a[aria-current="page"]{color:var(--accent-fg);background:var(--accent)}
+.user{position:relative}
+.avatar{display:flex;align-items:center;gap:8px;background:none;border:0;cursor:pointer;padding:2px}
+.avatar b{width:38px;height:38px;border-radius:50%;background:var(--ember);color:#1b0b05;display:grid;place-items:center;font:800 13px var(--display)}
+.avatar span{font-size:13px;font-weight:700;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu{position:absolute;right:0;top:calc(100% + 12px);min-width:210px;background:#0a2b26;border:1px solid var(--line);padding:6px;box-shadow:0 16px 40px #0008;border-radius:4px}
+.menu a,.menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:9px 12px;text-decoration:none;color:var(--fg);cursor:pointer;font-size:14px}
+.menu a:hover,.menu button:hover{background:var(--glass2)}
+.menu .who{padding:8px 12px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px;overflow-wrap:anywhere}
+#burger{display:none;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:none;color:var(--fg);cursor:pointer;place-items:center}
+@media (max-width:860px){
+  #burger{display:grid}
+  nav{position:absolute;left:0;right:0;top:calc(100% + 10px);flex-direction:column;background:#0a2b26;border:1px solid var(--line);border-radius:14px;padding:8px;box-shadow:0 16px 40px #0008}
+  nav a{border-radius:8px}
+  .avatar span{display:none}#bar{gap:10px}.logo{flex:1}
+}
+main{max-width:1120px;margin:0 auto;padding-block:36px 56px}
+.page-h{margin-bottom:24px}
+.page-h h1{font-size:clamp(34px,6vw,60px);line-height:1}
+.page-h p{color:var(--muted);margin:12px 0 0;max-width:60ch;font-size:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:22px}
+.stat{padding:12px 14px;min-width:0}
+.stat span{display:block;font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stat strong{font:700 28px var(--display);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tool{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;min-height:260px;padding:20px;text-decoration:none;color:var(--fg);border:1px solid var(--line);border-radius:4px;background:#07241f}
+.tool canvas{position:absolute;inset:0;width:100%;height:100%;transition:transform .5s}
+.tool:hover canvas{transform:scale(1.05)}
+.tool .shade{position:absolute;inset:0;background:linear-gradient(to top,rgba(5,24,21,.96) 28%,rgba(5,24,21,.1) 80%)}
+.tool>*:not(canvas):not(.shade){position:relative}
+.tool .tag{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.tool h3{font-size:24px;margin:4px 0}.tool p{margin:0;color:var(--muted);font-size:14px}
+.tool .go{margin-top:10px;font-weight:800;color:var(--accent);font-size:14px}
+.split{display:grid;grid-template-columns:minmax(0,350px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.split{grid-template-columns:minmax(0,1fr)}}
+.panel{padding:20px}
+.panel h2{font:500 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+.stack{display:flex;flex-direction:column;gap:20px;min-width:0}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.formula{font:400 13px/1.8 var(--mono);background:var(--field);border-left:3px solid var(--accent);padding:12px 14px;margin-top:16px;overflow-x:auto;white-space:nowrap}
+.formula b{color:var(--accent);font-weight:500}
+.bits{display:grid;grid-template-columns:repeat(auto-fill,minmax(24px,1fr));gap:4px}
+.bit{aspect-ratio:1;display:grid;place-items:center;font:700 12px var(--mono);background:var(--bit0);color:var(--muted)}
+.bit.one{background:var(--accent);color:var(--accent-fg)}
+.seq{font:500 14px/1.6 var(--mono);background:var(--field);padding:10px 12px;margin-top:14px;overflow-wrap:anywhere}
+.copy{font:500 11px var(--mono);border:1px solid var(--line);background:none;color:var(--muted);padding:2px 8px;cursor:pointer;margin-left:8px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font:400 13px var(--mono);font-variant-numeric:tabular-nums}
+th{text-align:left;font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.lsb{font-weight:700}td.lsb.one{color:var(--accent)}
+.steps{display:flex;flex-direction:column}
+.step{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;padding-bottom:16px;position:relative}
+.step:not(:last-child)::before{content:"";position:absolute;left:13px;top:28px;bottom:0;width:2px;background:var(--line)}
+.dot{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--mono);background:var(--field);color:var(--muted);border:1px solid var(--line)}
+.step.done .dot{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.step.ok .dot{background:var(--good);color:#06201c;border-color:var(--good)}
+.step.fail .dot{background:var(--bad);color:#06201c;border-color:var(--bad)}
+.step h3{font:700 16px var(--display);margin:3px 0 4px}
+.step p{margin:0 0 6px;font-size:13px;color:var(--muted)}
+.kv{font:400 12px/1.5 var(--mono);background:var(--field);padding:8px 10px;overflow-wrap:anywhere;margin-top:6px}
+.kv i{font-style:normal;color:var(--muted);display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.pill{display:inline-block;font:700 12px var(--mono);padding:3px 10px;border-radius:99px}
+.pill.good{background:var(--good-soft);color:var(--good)}.pill.bad{background:var(--bad-soft);color:var(--bad)}
+details{padding:0 18px;margin-bottom:12px}
+summary{cursor:pointer;font-weight:700;padding:15px 0;list-style:none;display:flex;justify-content:space-between;gap:12px}
+summary::after{content:"+";color:var(--accent);font:700 18px var(--mono)}
+details[open] summary::after{content:"−"}
+details p{margin:0 0 16px;color:var(--muted)}
+.hist{list-style:none;margin:0;padding:0}
+.hist li{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.hist time{font:400 12px var(--mono);color:var(--muted);white-space:nowrap}
+.empty{color:var(--muted)}
+footer{color:var(--muted);font-size:12px;margin-top:30px;max-width:80ch}
+
+.seg{display:flex;border:1px solid var(--line);margin-bottom:16px}
+.seg button{flex:1;padding:8px 10px;background:none;border:0;color:var(--muted);font-weight:700;cursor:pointer;font-size:13px}
+.seg button.on{background:var(--accent);color:var(--accent-fg)}
+.stephead{display:flex;align-items:center;gap:14px;font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.stephead .bar{flex:1;height:4px;background:rgba(255,255,255,.14)}
+.stephead .bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .25s}
+.ctrl{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.ctrl .btn.next{flex:1;min-width:150px}
+.sbody{background:var(--field);border-left:3px solid var(--accent);padding:14px 16px;margin-bottom:16px}
+.sbody h3{font-size:20px;margin-bottom:4px}.sbody>p{margin:0 0 12px;color:var(--muted);font-size:14px}
+.rows{display:grid;gap:10px}.rows div{font:400 13px/1.5 var(--mono);overflow-wrap:anywhere}
+.rows i{font-style:normal;display:block;font-size:12px;color:var(--muted)}
+.rows b{color:var(--accent);font-weight:700}
+.step.cur h3{color:var(--accent)}
+.hintnext{font-size:13px;color:var(--muted);margin:0 0 14px}
+.sub2{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+</style>
+</head>
+<body>
+
+<canvas id="scene"></canvas><canvas id="rain"></canvas>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mark" viewBox="0 0 60 64">
+    <path d="M30 3 L54 11 V32 C54 46 44 56 30 61 C16 56 6 46 6 32 V11 Z" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M25 26 C25 17 13 17 13 28 C13 39 25 39 25 30" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+    <path d="M47 15 C34 28 34 36 47 49" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="19" cy="28" r="2.6" fill="currentColor"/>
+  </symbol>
+</svg>
+
+<!-- AUTH -->
+<div id="auth" hidden>
+  <section class="pitch">
+    <a class="logo" href="#login"><svg><use href="#mark"/></svg>modulo</a>
+    <div class="eyebrow">Cryptography &amp; Network Security</div>
+    <h1>Square it. <em>Curve it.</em> Lock it.</h1>
+    <p>Run Blum Blum Shub and elliptic curve cryptography side by side, from random bits to an encrypted message.</p>
+    <div class="chips"><span>xᵢ = xᵢ₋₁² mod n</span><span>y² = x³ + ax + b</span><span>ECDH · P-256</span><span>AES-256-GCM</span></div>
+  </section>
+  <section>
+    <form class="card glass" id="loginForm" hidden novalidate>
+      <h2>Sign in</h2><p class="sub">Open your lab bench.</p>
+      <div class="err" id="loginErr" hidden></div>
+      <div class="field"><label for="lemail">Email</label><input class="inp" id="lemail" type="email" autocomplete="email" placeholder="you@college.edu"></div>
+      <div class="field"><label for="lpass">Password</label><div class="pw"><input class="inp" id="lpass" type="password" autocomplete="current-password"><button type="button" data-eye="lpass">SHOW</button></div></div>
+      <button class="btn full" type="submit">Sign in</button>
+      <div class="or">or</div>
+      <button class="btn ghost full" type="button" id="demoBtn">Try the demo account</button>
+      <p class="alt">New here? <a href="#register">Create an account</a></p>
+    </form>
+    <form class="card glass" id="regForm" hidden novalidate>
+      <h2>Create account</h2><p class="sub">Takes under a minute. No email is sent.</p>
+      <div class="err" id="regErr" hidden></div>
+      <div class="field"><label for="rname">Full name</label><input class="inp" id="rname" autocomplete="name" placeholder="Asha Verma"></div>
+      <div class="row2">
+        <div class="field"><label for="remail">Email</label><input class="inp" id="remail" type="email" autocomplete="email" placeholder="you@college.edu"></div>
+        <div class="field"><label for="rrole">I am a</label><select class="inp" id="rrole"><option>Student</option><option>Faculty</option><option>Self-learner</option></select></div>
+      </div>
+      <div class="field"><label for="rpass">Password</label><div class="pw"><input class="inp" id="rpass" type="password" autocomplete="new-password"><button type="button" data-eye="rpass">SHOW</button></div>
+        <div class="meter" id="meter"><i></i><i></i><i></i><i></i></div><div class="hint" id="meterTxt">At least 8 characters with a letter and a number.</div></div>
+      <div class="field"><label for="rpass2">Confirm password</label><input class="inp" id="rpass2" type="password" autocomplete="new-password"></div>
+      <label class="check"><input type="checkbox" id="rterms"><span>I understand this is a classroom demo and my data stays in this browser.</span></label>
+      <button class="btn full" type="submit">Create account</button>
+      <p class="alt">Already registered? <a href="#login">Sign in</a></p>
+    </form>
+  </section>
+</div>
+
+<!-- APP -->
+<div id="app" hidden>
+  <div id="barwrap" class="pad">
+    <header id="bar">
+      <a class="logo" href="#dashboard"><svg><use href="#mark"/></svg>modulo</a>
+      <nav id="nav" aria-label="Main">
+        <a href="#dashboard" data-r="dashboard">Dashboard</a>
+        <a href="#bbs" data-r="bbs">Blum Blum Shub</a>
+        <a href="#ecc" data-r="ecc">ECC + AES-GCM</a>
+        <a href="#learn" data-r="learn">Learn</a>
+      </nav>
+      <div class="user">
+        <button class="avatar" id="avatarBtn" aria-haspopup="true" aria-expanded="false"><b id="initials">U</b><span id="uname"></span></button>
+        <div class="menu" id="umenu" hidden>
+          <div class="who" id="uemail"></div>
+          <a href="#profile">Profile</a>
+          <button id="logoutBtn">Sign out</button>
+        </div>
+      </div>
+      <button id="burger" aria-label="Open menu" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </header>
+  </div>
+
+  <main class="pad">
+    <section id="v-dashboard" hidden>
+      <div class="page-h"><div class="eyebrow">Workspace</div><h1>Your crypto bench</h1><p>Pick an experiment, revise the theory, or look back at what you ran.</p></div>
+      <div class="stats" id="dstats"></div>
+      <div class="grid3">
+        <a class="tool" href="#bbs"><canvas data-mini="bbs"></canvas><div class="shade"></div><span class="tag">Pseudorandom generator</span><h3>Blum Blum Shub</h3><p>Square a state modulo n = p·q and keep the lowest bit.</p><span class="go">Run experiment →</span></a>
+        <a class="tool" href="#ecc"><canvas data-mini="ecc"></canvas><div class="shade"></div><span class="tag">Public-key crypto</span><h3>ECC + ECDH + AES-GCM</h3><p>Agree on a secret over P-256, then encrypt a message with it.</p><span class="go">Run experiment →</span></a>
+        <a class="tool" href="#learn"><canvas data-mini="learn"></canvas><div class="shade"></div><span class="tag">Viva preparation</span><h3>Learn the theory</h3><p>Short answers to what examiners ask about both algorithms.</p><span class="go">Open notes →</span></a>
+      </div>
+      <div class="panel glass" style="margin-top:22px"><h2>Recent activity</h2><ul class="hist" id="dhist"></ul></div>
+    </section>
+
+    <section id="v-bbs" hidden>
+      <div class="page-h"><div class="eyebrow">Experiment · pseudorandom bits</div><h1>Blum Blum Shub</h1><p>Generate bits from two primes and a seed. The artwork behind this page is the squaring map i → i² mod 97 drawn as chords.</p></div>
+      <div class="split">
+        <div class="panel glass">
+          <h2>Inputs</h2>
+          <div class="seg" id="bbsMode"><button class="on" data-m="all">All at once</button><button data-m="step">Step by step</button></div>
+          <div class="err" id="bbsErr" hidden></div>
+          <div class="row2 keep">
+            <div class="field"><label for="p">Prime p</label><input class="inp mono" id="p" inputmode="numeric" value="383"></div>
+            <div class="field"><label for="q">Prime q</label><input class="inp mono" id="q" inputmode="numeric" value="503"></div>
+          </div>
+          <div class="row2 keep">
+            <div class="field"><label for="seed">Seed</label><input class="inp mono" id="seed" inputmode="numeric" value="101"></div>
+            <div class="field"><label for="count">Bits</label><input class="inp mono" id="count" inputmode="numeric" value="32"></div>
+          </div>
+          <div class="hint" style="margin:0 0 14px">p and q must be distinct primes with p ≡ q ≡ 3 (mod 4). The seed must share no factor with n.</div>
+          <div class="btns"><button class="btn" id="bbsRun">Generate bits</button><button class="btn ghost" id="bbsDemo">Reset to demo</button></div>
+          <div class="formula"><b>n</b> = p · q<br><b>x₀</b> = seed² mod n<br><b>xᵢ</b> = xᵢ₋₁² mod n<br><b>bit</b> = xᵢ mod 2</div>
+        </div>
+        <div class="stack">
+          <div class="panel glass" id="bbsStepPanel" hidden>
+            <h2>Step by step</h2>
+            <div class="stephead"><span id="bsCount">Ready</span><div class="bar"><i id="bsBar"></i></div></div>
+            <div class="ctrl"><button class="btn ghost" id="bsBack">← Back</button><button class="btn next" id="bsNext">Next step →</button><button class="btn ghost" id="bsAll">Show all</button><button class="btn ghost" id="bsReset">Reset</button></div>
+            <div class="sbody" id="bsBody"></div>
+            <div class="bits" id="bsBits"></div>
+            <div class="sub2">Rounds completed</div>
+            <div class="tablewrap"><table><thead><tr><th>round</th><th>xᵢ</th><th>bit</th></tr></thead><tbody id="bsRows"></tbody></table></div>
+          </div>
+          <div class="panel glass" id="bbsP1"><h2>Generated sequence</h2><div class="stats" id="bbsStats" style="margin-bottom:14px"></div><div class="bits" id="bbsBits"></div>
+            <div class="seq"><span id="bbsSeq"></span><button class="copy" id="bbsCopy">Copy</button></div></div>
+          <div class="panel glass" id="bbsP2"><h2>Internal states (first 10)</h2><div class="tablewrap"><table><thead><tr><th>i</th><th>xᵢ</th><th>binary</th><th>bit</th></tr></thead><tbody id="bbsRows"></tbody></table></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="v-ecc" hidden>
+      <div class="page-h"><div class="eyebrow">Experiment · key agreement</div><h1>ECC + ECDH + AES-GCM</h1><p>Two parties agree on a key over an open channel, then use it to encrypt. The artwork shows point addition on a real curve: P + Q = R.</p></div>
+      <div class="split">
+        <div class="panel glass">
+          <h2>Inputs</h2>
+          <div class="seg" id="eccMode"><button class="on" data-m="all">All at once</button><button data-m="step">Step by step</button></div>
+          <div class="field"><label for="msg">Message to encrypt</label><textarea class="inp mono" id="msg" rows="4">Meet me at the library at 5 pm.</textarea></div>
+          <div class="btns"><button class="btn" id="eccRun">Run key exchange</button></div>
+          <div class="btns" style="margin-top:10px"><button class="btn ghost" id="tamper" disabled>Tamper with ciphertext</button><button class="btn ghost" id="restore" disabled>Restore</button></div>
+          <div class="hint" style="margin-top:12px">Each run creates new key pairs and a new nonce. Tampering flips one bit so you can see AES-GCM reject the message.</div>
+          <div class="formula"><b>curve</b> = NIST P-256<br><b>secret</b> = ECDH(dA, QB) = ECDH(dB, QA)<br><b>key</b> = HKDF-SHA256(secret)<br><b>cipher</b> = AES-256-GCM</div>
+        </div>
+        <div class="panel glass"><h2>Protocol trace</h2>
+          <div id="eccCtrl" hidden>
+            <div class="stephead"><span id="ecCount">Step 1 of 6</span><div class="bar"><i id="ecBar"></i></div></div>
+            <div class="ctrl"><button class="btn ghost" id="ecBack">← Back</button><button class="btn next" id="ecNext">Next step →</button><button class="btn ghost" id="ecAll">Show all</button><button class="btn ghost" id="ecReset">Restart</button></div>
+            <p class="hintnext" id="ecHint"></p>
+          </div>
+          <div class="steps" id="steps"></div></div>
+      </div>
+    </section>
+
+    <section id="v-learn" hidden>
+      <div class="page-h"><div class="eyebrow">Revision</div><h1>Learn the theory</h1><p>Short answers you can say out loud in a viva.</p></div>
+      <details class="glass" open><summary>How does Blum Blum Shub work?</summary><p>Pick two primes p and q that are each 3 mod 4, and let n = p·q. Start from x₀ = seed² mod n. Each round squares the previous state modulo n, and the lowest bit of the new state is the output bit. Predicting the next bit is as hard as factoring n.</p></details>
+      <details class="glass"><summary>Why must p and q be 3 mod 4?</summary><p>It makes every quadratic residue have a square root that is itself a quadratic residue, so the squaring map cycles through states without collapsing. That gives the generator long, well-behaved cycles.</p></details>
+      <details class="glass"><summary>Is BBS used in real systems today?</summary><p>Rarely. It does a modular squaring per bit, so it is slow. Modern systems use faster generators such as ChaCha20 or AES-CTR based designs. BBS is taught because its security argument is clean.</p></details>
+      <details class="glass"><summary>What is an elliptic curve in cryptography?</summary><p>The set of points satisfying y² = x³ + ax + b over a finite field, plus a point at infinity. Points can be added, and repeated addition gives scalar multiplication k·G. Going backwards from k·G to k is the elliptic curve discrete logarithm problem.</p></details>
+      <details class="glass"><summary>What does ECDH do, and does it encrypt anything?</summary><p>ECDH is key agreement. Alice sends dA·G, Bob sends dB·G, and both compute dA·dB·G without ever sending it. It does not encrypt a message by itself, so the demo derives an AES key from the shared secret.</p></details>
+      <details class="glass"><summary>Why use AES-GCM after ECDH?</summary><p>AES-GCM encrypts and authenticates in one step. If anyone changes the ciphertext, the authentication tag check fails and decryption returns nothing. The Tamper button on the ECC page shows this.</p></details>
+      <details class="glass"><summary>Why is ECC preferred over RSA?</summary><p>A 256-bit elliptic curve key gives roughly the same security as a 3072-bit RSA key, so keys are smaller and operations are faster.</p></details>
+    </section>
+
+    <section id="v-profile" hidden>
+      <div class="page-h"><div class="eyebrow">Account</div><h1>Your profile</h1><p>Account details are stored only in this browser.</p></div>
+      <div class="split">
+        <form class="panel glass" id="profForm" novalidate>
+          <h2>Details</h2>
+          <div class="okmsg" id="profOk" hidden>Profile saved.</div>
+          <div class="field"><label for="pname">Full name</label><input class="inp" id="pname"></div>
+          <div class="field"><label for="pemail">Email</label><input class="inp" id="pemail" disabled></div>
+          <div class="field"><label for="prole">Role</label><select class="inp" id="prole"><option>Student</option><option>Faculty</option><option>Self-learner</option></select></div>
+          <button class="btn" type="submit">Save changes</button>
+        </form>
+        <div class="stack">
+          <div class="panel glass"><h2>Account</h2><div class="stats" id="pstats" style="margin-bottom:0"></div></div>
+          <div class="panel glass"><h2>Danger zone</h2>
+            <div class="btns"><button class="btn ghost" id="clearHist">Clear activity</button><button class="btn danger" id="delAcc">Delete account</button></div>
+            <div class="btns" id="delConfirm" hidden style="margin-top:12px;align-items:center"><span style="font-size:14px">Delete this account for good?</span><button class="btn danger" id="delYes">Yes, delete</button><button class="btn ghost" id="delNo">Cancel</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <footer>Modulo is an educational project. BBS is for learning, not for real keys. Accounts live in this browser only and are not a substitute for real authentication.</footer>
+  </main>
+</div>
+
+<script>
+const $=id=>document.getElementById(id), qa=s=>[...document.querySelectorAll(s)];
+const enc=new TextEncoder(),dec=new TextDecoder();
+const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- storage (falls back to memory) ---------- */
+const mem={};
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?(k in mem?mem[k]:d):JSON.parse(v)}catch(e){return k in mem?mem[k]:d}},
+  set(k,v){mem[k]=v;try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const users=()=>store.get('md_users',[]),session=()=>store.get('md_session',null),me=()=>users().find(u=>u.email===session());
+const histAll=()=>store.get('md_hist',{}),myHist=()=>histAll()[session()]||[];
+function log(kind,text){const h=histAll();h[session()]=[{kind,text,t:Date.now()},...(h[session()]||[])].slice(0,200);store.set('md_hist',h)}
+async function hashPw(pw,salt){return hex(await crypto.subtle.digest('SHA-256',enc.encode(salt+':'+pw)))}
+
+/* ---------- background plates (all drawn from the project's own maths) ---------- */
+const ACC='#f4b942',EMB='#ff7a59',MUT='#a5c4ba';
+function fieldDots(c,x0,y0,w,h,P,a){ // points on y^2 = x^3 + 7 over GF(P)
+  const sx=w/P,sy=h/P,r=Math.max(1.2,Math.min(sx,sy)*.85);c.fillStyle=ACC;c.globalAlpha=a;
+  const sq=new Map();for(let y=0;y<P;y++){const k=y*y%P;(sq.get(k)||sq.set(k,[]).get(k)).push(y)}
+  c.beginPath();for(let x=0;x<P;x++)(sq.get((x*x*x+7)%P)||[]).forEach(y=>{c.moveTo(x0+x*sx+r,y0+y*sy);c.arc(x0+x*sx,y0+y*sy,r,0,6.283)});c.fill();c.globalAlpha=1}
+function curvePath(c,A,B,ox,oy,s,sg){let st=false;c.beginPath();for(let t=-2.6;t<=3.4;t+=.015){const v=t*t*t+A*t+B;if(v<0){st=false;continue}const px=ox+t*s,py=oy-sg*Math.sqrt(v)*s;if(!st){c.moveTo(px,py);st=true}else c.lineTo(px,py)}c.stroke()}
+function chords(c,cx,cy,r,N,a){ // squaring map i -> i^2 mod N
+  const pt=i=>[cx+r*Math.cos(6.283*i/N-1.571),cy+r*Math.sin(6.283*i/N-1.571)];
+  c.strokeStyle=ACC;c.lineWidth=1;c.globalAlpha=a;
+  for(let i=0;i<N;i++){const j=i*i%N;if(j===i)continue;const[a1,b1]=pt(i),[a2,b2]=pt(j);c.beginPath();c.moveTo(a1,b1);c.quadraticCurveTo(cx+(a1+a2-2*cx)*.18,cy+(b1+b2-2*cy)*.18,a2,b2);c.stroke()}
+  c.globalAlpha=Math.min(1,a*3);c.fillStyle=EMB;for(let i=0;i<N;i++){const[x,y]=pt(i);c.beginPath();c.arc(x,y,Math.max(1.6,r/90),0,6.283);c.fill()}
+  c.globalAlpha=a*.7;c.strokeStyle=MUT;c.beginPath();c.arc(cx,cy,r,0,6.283);c.stroke();c.globalAlpha=1}
+function bitMatrix(c,w,h,a){c.font='500 15px '+(getComputedStyle(document.documentElement).getPropertyValue('--mono')||'monospace');c.fillStyle=ACC;
+  for(let y=0;y<h;y+=19)for(let x=0;x<w;x+=15){const k=Math.sin(x*.011+y*.006)+Math.cos(y*.013-x*.004);const bit=((x*131+y*71)^(x*y))&1;
+    c.globalAlpha=Math.max(.02,a*(.5+.5*Math.sin(k*2.2)));c.fillText(bit,x,y)}c.globalAlpha=1}
+function eccAdd(c,w,h,a,mini){ // P + Q = R on y^2 = x^3 - 2x + 2
+  const A=-2,B=2,s=Math.min(w*(mini?.62:.4),h*(mini?.5:.5))/6,ox=w*(mini?.45:.68),oy=h*(mini?.46:.3),Y=x=>Math.sqrt(x*x*x+A*x+B);
+  c.lineWidth=mini?1.6:2.2;c.strokeStyle=ACC;c.globalAlpha=a;curvePath(c,A,B,ox,oy,s,1);curvePath(c,A,B,ox,oy,s,-1);
+  const xp=-1.3,yp=Y(xp),xq=.6,yq=-Y(xq),m=(yq-yp)/(xq-xp),xr=m*m-xp-xq,yl=yp+m*(xr-xp),X=x=>ox+x*s,Yp=y=>oy-y*s;
+  c.setLineDash([7,6]);c.strokeStyle=MUT;c.lineWidth=1.3;c.beginPath();c.moveTo(X(-2.3),Yp(yp+m*(-2.3-xp)));c.lineTo(X(xr),Yp(yl));c.stroke();
+  c.beginPath();c.moveTo(X(xr),Yp(yl));c.lineTo(X(xr),Yp(-yl));c.stroke();c.setLineDash([]);
+  c.globalAlpha=Math.min(1,a*1.7);const lab=mini?0:1;c.font='700 15px '+(getComputedStyle(document.documentElement).getPropertyValue('--mono')||'monospace');
+  [[xp,yp,'P',ACC],[xq,yq,'Q',ACC],[xr,yl,'−R',MUT],[xr,-yl,'P+Q',EMB]].forEach(([x,y,t,col])=>{c.fillStyle=col;c.beginPath();c.arc(X(x),Yp(y),mini?4:6.5,0,6.283);c.fill();if(lab){c.fillText(t,X(x)+11,Yp(y)-9)}});
+  c.globalAlpha=1}
+function drawScene(c,w,h,name){
+  const g=c.createLinearGradient(0,0,w,h);g.addColorStop(0,'#05201c');g.addColorStop(.6,'#0a3530');g.addColorStop(1,'#0f4a3f');c.fillStyle=g;c.fillRect(0,0,w,h);
+  const r=c.createRadialGradient(w*.85,h*.1,0,w*.85,h*.1,Math.max(w,h)*.7);r.addColorStop(0,'rgba(244,185,66,.20)');r.addColorStop(1,'rgba(244,185,66,0)');c.fillStyle=r;c.fillRect(0,0,w,h);
+  const mini=w<500&&h<400,R=Math.min(w,h);
+  if(name==='auth'){fieldDots(c,0,0,w,h,509,.5);c.strokeStyle=MUT;c.lineWidth=1.3;c.globalAlpha=.35;[[-3,1,.2,.35],[-3,2.4,.5,.6],[-3,-1.2,.8,.2]].forEach(([A,B,fx,fy],i)=>{curvePath(c,A,B,w*fx,h*fy,R/(7+i),1);curvePath(c,A,B,w*fx,h*fy,R/(7+i),-1)});c.globalAlpha=1;chords(c,w*.82,h*.8,R*.3,97,.1)}
+  else if(name==='dash'){fieldDots(c,w*.3,0,w*.7,h,509,.28);chords(c,w*.78,h*.4,R*.46,97,.2);bitMatrix(c,w*.4,h,.1)}
+  else if(name==='bbs'){bitMatrix(c,w,h,.3);chords(c,w*.8,h*.45,R*.5,97,.3)}
+  else if(name==='ecc'){fieldDots(c,0,0,w,h,509,.22);eccAdd(c,w,h,.6,false)}
+  else if(name==='learn'){fieldDots(c,0,0,w,h,509,.3);chords(c,w*.85,h*.3,R*.4,97,.16)}
+  else if(name==='mini-bbs'){bitMatrix(c,w,h,.35);chords(c,w*.7,h*.4,R*.62,97,.45)}
+  else if(name==='mini-ecc'){fieldDots(c,0,0,w,h,509,.3);eccAdd(c,w,h,.8,true)}
+  else if(name==='mini-learn'){fieldDots(c,0,0,w,h,509,.55);chords(c,w*.5,h*.42,R*.4,97,.3)}
+}
+function fit(cv,w,h){const d=Math.min(devicePixelRatio||1,2);cv.width=w*d;cv.height=h*d;const c=cv.getContext('2d');c.setTransform(d,0,0,d,0,0);return c}
+let curScene='auth';
+function paintScene(){const w=innerWidth,h=innerHeight;drawScene(fit($('scene'),w,h),w,h,curScene);cols=[]}
+function paintMinis(){qa('canvas[data-mini]').forEach(cv=>{const p=cv.parentElement,w=p.clientWidth,h=p.clientHeight;if(w)drawScene(fit(cv,w,h),w,h,'mini-'+cv.dataset.mini)})}
+let cols=[],last=0;const reduce=matchMedia('(prefers-reduced-motion: reduce)');
+function rain(t){requestAnimationFrame(rain);if(t-last<70||reduce.matches)return;last=t;
+  const w=innerWidth,h=innerHeight,cv=$('rain'),c=cv.getContext('2d');if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
+  if(!cols.length)for(let i=0;i<Math.ceil(w/20);i++)cols.push({x:i*20,y:Math.random()*h,v:3+Math.random()*7});
+  c.clearRect(0,0,w,h);c.font='500 13px monospace';c.fillStyle=ACC;
+  cols.forEach(k=>{k.y+=k.v;if(k.y>h+110){k.y=-10;k.v=3+Math.random()*7}for(let j=0;j<6;j++){c.globalAlpha=Math.max(0,.3-j*.05);c.fillText(((k.x+j+Math.floor(k.y/14))%3===0)?'0':'1',k.x,k.y-j*15)}});c.globalAlpha=1}
+requestAnimationFrame(rain);
+addEventListener('resize',()=>{clearTimeout(paintScene.t);paintScene.t=setTimeout(()=>{paintScene();paintMinis()},150)});
+
+/* ---------- router ---------- */
+const pub=['login','register'],priv=['dashboard','bbs','ecc','learn','profile'];
+const sceneFor={login:'auth',register:'auth',dashboard:'dash',bbs:'bbs',ecc:'ecc',learn:'learn',profile:'learn'};
+const go=r=>{location.hash=r};
+function route(){
+  let r=(location.hash||'').slice(1);const u=me();
+  if(!u&&!pub.includes(r))r='login';
+  if(u&&(pub.includes(r)||!r))r='dashboard';
+  if(!pub.concat(priv).includes(r))r=u?'dashboard':'login';
+  if(location.hash.slice(1)!==r){location.replace('#'+r);return}
+  const isPub=pub.includes(r);
+  $('auth').hidden=!isPub;$('app').hidden=isPub;
+  $('loginForm').hidden=r!=='login';$('regForm').hidden=r!=='register';
+  priv.forEach(k=>$('v-'+k).hidden=k!==r);
+  qa('#nav a').forEach(a=>a.dataset.r===r?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
+  closeMenus();scrollTo(0,0);
+  if(sceneFor[r]!==curScene||!curScene.painted){curScene=sceneFor[r];paintScene()}
+  if(!isPub){const uu=me();$('uname').textContent=uu.name.split(' ')[0];$('initials').textContent=uu.name.split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();$('uemail').textContent=uu.email;
+    if(r==='dashboard'){renderDash();paintMinis()}if(r==='profile')renderProfile();if(r==='bbs'&&!bbsDone)runBBS(true);if(r==='ecc'&&!eccDone)runECC(true)}
+}
+addEventListener('hashchange',route);
+function closeMenus(){$('umenu').hidden=true;$('avatarBtn').setAttribute('aria-expanded','false');if(innerWidth<=860)$('nav').hidden=true;$('burger').setAttribute('aria-expanded','false')}
+addEventListener('resize',()=>{$('nav').hidden=innerWidth<=860?$('nav').hidden:false});
+$('burger').onclick=e=>{e.stopPropagation();const o=$('nav').hidden;$('nav').hidden=!o;$('burger').setAttribute('aria-expanded',o)};
+$('avatarBtn').onclick=e=>{e.stopPropagation();const o=$('umenu').hidden;$('umenu').hidden=!o;$('avatarBtn').setAttribute('aria-expanded',o)};
+document.addEventListener('click',e=>{if(!e.target.closest('.user'))$('umenu').hidden=true;if(!e.target.closest('#nav,#burger')&&innerWidth<=860)$('nav').hidden=true});
+$('logoutBtn').onclick=()=>{store.set('md_session',null);go('login')};
+
+/* ---------- auth ---------- */
+qa('[data-eye]').forEach(b=>b.onclick=()=>{const i=$(b.dataset.eye),s=i.type==='password';i.type=s?'text':'password';b.textContent=s?'HIDE':'SHOW'});
+const showErr=(id,m)=>{const e=$(id);e.textContent=m||'';e.hidden=!m};
+function strength(p){let s=0;if(p.length>=8)s++;if(/[a-z]/.test(p)&&/[A-Z]/.test(p))s++;if(/\d/.test(p))s++;if(/[^A-Za-z0-9]/.test(p)||p.length>=12)s++;return p?Math.max(1,s):0}
+$('rpass').oninput=e=>{const s=strength(e.target.value);qa('#meter i').forEach((i,k)=>i.className=k<s?'on'+s:'');
+  $('meterTxt').textContent=['At least 8 characters with a letter and a number.','Weak','Fair','Good','Strong'][s]};
+$('regForm').onsubmit=async e=>{e.preventDefault();
+  const name=$('rname').value.trim(),email=$('remail').value.trim().toLowerCase(),pw=$('rpass').value;let m='';
+  if(name.length<2)m='Enter your full name.';
+  else if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))m='Enter a valid email address.';
+  else if(pw.length<8||!/[A-Za-z]/.test(pw)||!/\d/.test(pw))m='Use a password of at least 8 characters with a letter and a number.';
+  else if(pw!==$('rpass2').value)m='The two passwords do not match.';
+  else if(!$('rterms').checked)m='Tick the box to confirm you understand this is a demo.';
+  else if(users().some(u=>u.email===email))m='An account with this email already exists. Sign in instead.';
+  showErr('regErr',m);if(m)return;
+  const salt=hex(crypto.getRandomValues(new Uint8Array(8)));
+  store.set('md_users',[...users(),{name,email,role:$('rrole').value,salt,hash:await hashPw(pw,salt),joined:Date.now()}]);
+  store.set('md_session',email);log('account','Account created');go('dashboard')};
+$('loginForm').onsubmit=async e=>{e.preventDefault();
+  const email=$('lemail').value.trim().toLowerCase(),u=users().find(x=>x.email===email);
+  if(!u||u.hash!==await hashPw($('lpass').value,u.salt)){showErr('loginErr','Email or password is incorrect.');return}
+  showErr('loginErr','');store.set('md_session',email);log('login','Signed in');go('dashboard')};
+$('demoBtn').onclick=async()=>{const email='demo@modulo.app';
+  if(!users().some(u=>u.email===email)){const salt='demo';store.set('md_users',[...users(),{name:'Demo Student',email,role:'Student',salt,hash:await hashPw('Demo@1234',salt),joined:Date.now()}])}
+  store.set('md_session',email);log('login','Signed in with the demo account');go('dashboard')};
+
+/* ---------- dashboard & profile ---------- */
+const ago=t=>{const s=(Date.now()-t)/1000;return s<60?'just now':s<3600?Math.floor(s/60)+' min ago':s<86400?Math.floor(s/3600)+' h ago':new Date(t).toLocaleDateString()};
+function renderDash(){
+  const h=myHist(),c=k=>h.filter(x=>x.kind===k).length;
+  $('dstats').innerHTML=[['Total runs',c('bbs')+c('ecc')],['BBS runs',c('bbs')],['ECC runs',c('ecc')],['Tamper tests',c('tamper')]].map(([k,v])=>`<div class="stat glass"><span>${k}</span><strong>${v}</strong></div>`).join('');
+  const rows=h.filter(x=>['bbs','ecc','tamper'].includes(x.kind)).slice(0,8);
+  $('dhist').innerHTML=rows.length?rows.map(x=>`<li><span>${esc(x.text)}</span><time>${ago(x.t)}</time></li>`).join(''):'<li class="empty">No runs yet. Open an experiment above to start.</li>';
+}
+function renderProfile(){const u=me();$('pname').value=u.name;$('pemail').value=u.email;$('prole').value=u.role;$('profOk').hidden=true;$('delConfirm').hidden=true;
+  $('pstats').innerHTML=`<div class="stat glass"><span>Member since</span><strong style="font-size:18px">${new Date(u.joined).toLocaleDateString()}</strong></div><div class="stat glass"><span>Role</span><strong style="font-size:18px">${esc(u.role)}</strong></div><div class="stat glass"><span>Logged events</span><strong>${myHist().length}</strong></div>`}
+$('profForm').onsubmit=e=>{e.preventDefault();const n=$('pname').value.trim();if(n.length<2)return;
+  store.set('md_users',users().map(u=>u.email===session()?{...u,name:n,role:$('prole').value}:u));route();$('profOk').hidden=false};
+$('clearHist').onclick=()=>{const h=histAll();h[session()]=[];store.set('md_hist',h);renderProfile()};
+$('delAcc').onclick=()=>$('delConfirm').hidden=false;$('delNo').onclick=()=>$('delConfirm').hidden=true;
+$('delYes').onclick=()=>{const em=session();store.set('md_users',users().filter(u=>u.email!==em));const h=histAll();delete h[em];store.set('md_hist',h);store.set('md_session',null);go('register')};
+
+/* ---------- BBS ---------- */
+let bbsDone=false,bbsMode='all',bs=null;
+const isPrime=n=>{if(n<2)return false;for(let i=2;i*i<=n;i++)if(n%i===0)return false;return true};
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+function readBBS(){
+  const v=id=>Number($(id).value.trim()),p=v('p'),q=v('q'),seed=v('seed'),count=v('count');let m='';
+  if(![p,q,seed,count].every(Number.isInteger))m='All fields must be whole numbers.';
+  else if(!isPrime(p)||!isPrime(q))m='p and q must both be prime.';
+  else if(p===q)m='p and q must be different primes.';
+  else if(p%4!==3||q%4!==3)m='p and q must each leave remainder 3 when divided by 4.';
+  else if(seed<2||gcd(seed,p*q)!==1)m='The seed must be at least 2 and share no factor with n = p·q.';
+  else if(count<1||count>256)m='Choose between 1 and 256 bits.';
+  showErr('bbsErr',m);return m?null:{p,q,seed,count};
+}
+function runBBS(silent){
+  if(bbsMode==='step'&&silent!==true){startBS();return}
+  const r=readBBS();if(!r)return;const{p,q,seed,count}=r;
+  const n=BigInt(p)*BigInt(q);let x=BigInt(seed)**2n%n;const bits=[],st=[];
+  for(let i=1;i<=count;i++){x=x*x%n;bits.push(Number(x&1n));if(i<=10)st.push(x)}
+  const ones=bits.reduce((a,b)=>a+b,0);
+  $('bbsStats').innerHTML=[['n = p·q',n],['Bits',count],['Ones',ones],['Ones ratio',(ones/count*100).toFixed(1)+'%']].map(([k,val])=>`<div class="stat glass"><span>${k}</span><strong style="font-size:20px">${val}</strong></div>`).join('');
+  $('bbsBits').innerHTML=bits.map(b=>`<div class="bit ${b?'one':''}">${b}</div>`).join('');
+  $('bbsSeq').textContent=bits.join('');
+  $('bbsRows').innerHTML=st.map((s,i)=>`<tr><td>x${i+1}</td><td>${s}</td><td>${s.toString(2)}</td><td class="lsb ${s&1n?'one':''}">${s&1n}</td></tr>`).join('');
+  bbsDone=true;if(silent!==true)log('bbs',`BBS: ${count} bits, n = ${n}, seed ${seed}`);
+}
+const R=(k,v)=>`<div><i>${k}</i>${v}</div>`;
+function startBS(){
+  const r=readBBS();if(!r)return;const{p,q,seed,count}=r,n=BigInt(p)*BigInt(q),steps=[];
+  steps.push({t:'Check the inputs',d:'BBS only works when p and q are distinct primes that leave remainder 3 when divided by 4, and the seed shares no factor with n.',
+    rows:[R('p',`${p} is prime and ${p} mod 4 = 3`),R('q',`${q} is prime and ${q} mod 4 = 3`),R('seed',`gcd(${seed}, ${p*q}) = 1, so the seed is valid`)]});
+  steps.push({t:'Compute n',d:'Multiply the two primes. Every later calculation is done modulo n.',rows:[R('n = p × q',`${p} × ${q} = <b>${n}</b>`)]});
+  let x=BigInt(seed),sq=x*x;x=sq%n;
+  steps.push({t:'Compute the first state x0',d:'Square the seed modulo n, so the generator never starts from the raw seed.',rows:[R('seed²',`${seed}² = ${sq}`),R('x0 = seed² mod n',`${sq} mod ${n} = <b>${x}</b>`)]});
+  for(let i=1;i<=count;i++){const prev=x;sq=prev*prev;x=sq%n;const bit=Number(x&1n);
+    steps.push({t:`Round ${i} of ${count}`,d:'Square the previous state modulo n, then keep only the lowest bit of the result.',bit,x,i,
+      rows:[R(`x${i-1}²`,`${prev}² = ${sq}`),R(`x${i} = x${i-1}² mod n`,`${sq} mod ${n} = <b>${x}</b>`),R(`x${i} in binary`,x.toString(2)),R('Output bit (lowest bit)',`<b>${bit}</b> because ${x} is ${bit?'odd':'even'}`)]})}
+  const bits=steps.filter(z=>z.i).map(z=>z.bit);
+  steps.push({t:'Finished',d:'The generator has produced all requested bits.',rows:[R('Bit sequence',`<b>${bits.join('')}</b>`),R('Count of ones',`${bits.reduce((a,b)=>a+b,0)} of ${bits.length}`)]});
+  bs={steps,i:0,n,seed,count,logged:false};renderBS();
+}
+function renderBS(){
+  const pan=$('bsBody');
+  if(!bs){$('bsCount').textContent='Ready';$('bsBar').style.width='0';pan.innerHTML='<h3>Press "Start step by step"</h3><p style="margin:0;color:var(--muted)">Set your inputs on the left, then start. Each press of Next runs one calculation and shows the working.</p>';
+    ['bsBack','bsNext','bsAll','bsReset'].forEach(i=>$(i).disabled=true);$('bsBits').innerHTML='';$('bsRows').innerHTML='';return}
+  const{steps,i}=bs,s=steps[i],last=i===steps.length-1;
+  $('bsCount').textContent=`Step ${i+1} of ${steps.length}`;$('bsBar').style.width=((i+1)/steps.length*100)+'%';
+  pan.innerHTML=`<h3>${s.t}</h3><p>${s.d}</p><div class="rows">${s.rows.join('')}</div>`;
+  const done=steps.slice(0,i+1).filter(z=>z.i);
+  $('bsBits').innerHTML=done.map(z=>`<div class="bit ${z.bit?'one':''}">${z.bit}</div>`).join('');
+  $('bsRows').innerHTML=done.slice().reverse().slice(0,12).map(z=>`<tr><td>${z.i}</td><td>${z.x}</td><td class="lsb ${z.bit?'one':''}">${z.bit}</td></tr>`).join('');
+  $('bsBack').disabled=i===0;$('bsNext').disabled=last;$('bsNext').textContent=last?'Done':'Next step →';$('bsAll').disabled=last;$('bsReset').disabled=false;
+  if(last&&!bs.logged){bs.logged=true;log('bbs',`BBS (step by step): ${bs.count} bits, n = ${bs.n}, seed ${bs.seed}`)}
+}
+const bsMove=d=>{if(!bs)return;bs.i=Math.max(0,Math.min(bs.steps.length-1,bs.i+d));renderBS()};
+$('bsNext').onclick=()=>bsMove(1);$('bsBack').onclick=()=>bsMove(-1);
+$('bsAll').onclick=()=>{if(bs){bs.i=bs.steps.length-1;renderBS()}};
+$('bsReset').onclick=()=>{if(bs){bs.i=0;renderBS()}};
+function setBBSMode(m){bbsMode=m;qa('#bbsMode button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  const st=m==='step';$('bbsStepPanel').hidden=!st;$('bbsP1').hidden=st;$('bbsP2').hidden=st;
+  $('bbsRun').textContent=st?'Start step by step':'Generate bits';if(st)renderBS()}
+qa('#bbsMode button').forEach(b=>b.onclick=()=>setBBSMode(b.dataset.m));
+$('bbsRun').onclick=()=>runBBS();
+$('bbsDemo').onclick=()=>{$('p').value=383;$('q').value=503;$('seed').value=101;$('count').value=32;bs=null;if(bbsMode==='step')renderBS();else runBBS()};
+$('bbsCopy').onclick=e=>{const b=e.target,t=$('bbsSeq').textContent,ok=()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1200)};
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(ok).catch(()=>{const r=document.createRange();r.selectNodeContents($('bbsSeq'));const s=getSelection();s.removeAllRanges();s.addRange(r)})};
+qa('#v-bbs input').forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter')runBBS()}));
+
+/* ---------- ECC ---------- */
+let sess=null,eccDone=false,eccMode='all',eccUpto=6;
+const ECC_TITLES=['Generate key pairs','Exchange public keys','Compute ECDH shared secret','Derive AES key','Encrypt with AES-GCM','Bob decrypts'];
+const kv=(k,v)=>`<div class="kv"><i>${k}</i>${v}</div>`;
+function render(r){
+  const S=(cls,n,t,d,b)=>`<div class="step ${cls}"><div class="dot">${cls==='fail'?'✕':n}</div><div style="min-width:0"><h3>${t}</h3><p>${d}</p>${b||''}</div></div>`;
+  const all=[
+    S('done',1,ECC_TITLES[0],'Alice and Bob each create a private key and a public point on P-256.',`<div class="two">${kv('Alice public key (65 bytes)',r.pubA)}${kv('Bob public key (65 bytes)',r.pubB)}</div>`),
+    S('done',2,ECC_TITLES[1],'Only the public points travel over the open channel. Private keys never leave their owner.'),
+    S(r.match?'ok':'fail',3,ECC_TITLES[2],'Each side combines its own private key with the other side\'s public key.',`<div class="two">${kv('Alice computes',r.secA)}${kv('Bob computes',r.secB)}</div><div style="margin-top:8px"><span class="pill ${r.match?'good':'bad'}">${r.match?'Shared secrets match':'Secrets differ'}</span></div>`),
+    S('done',4,ECC_TITLES[3],'HKDF-SHA256 turns the shared secret into a 256-bit encryption key.',kv('AES-256 key',r.key)),
+    S('done',5,ECC_TITLES[4],'The plaintext is sealed with a random 12-byte nonce. GCM adds a 16-byte authentication tag.',`${kv('Plaintext',esc(r.plain))}<div class="two">${kv('Nonce',r.nonce)}${kv('Ciphertext + tag',r.ct)}</div>`),
+    S(r.ok?'ok':'fail',6,ECC_TITLES[5],'Bob uses the same derived key and nonce to open the message.',
+      r.ok?`${kv('Decrypted',esc(r.out))}<div style="margin-top:8px"><span class="pill good">Decryption successful</span></div>`
+          :`<div style="margin-top:4px"><span class="pill bad">Authentication failed, message rejected</span></div><p style="margin-top:8px">The tag no longer matches the ciphertext, so GCM refuses to return any plaintext.</p>`)];
+  const shown=all.slice(0,eccUpto).map((h,i)=>i===eccUpto-1&&eccMode==='step'?h.replace('class="step ','class="step cur '):h);
+  $('steps').innerHTML=shown.join('');
+  const step=eccMode==='step';$('eccCtrl').hidden=!step;
+  if(step){$('ecCount').textContent=`Step ${eccUpto} of 6`;$('ecBar').style.width=(eccUpto/6*100)+'%';
+    $('ecBack').disabled=eccUpto<=1;$('ecNext').disabled=eccUpto>=6;$('ecNext').textContent=eccUpto>=6?'Done':'Next step →';$('ecAll').disabled=eccUpto>=6;
+    $('ecHint').textContent=eccUpto<6?'Next: '+ECC_TITLES[eccUpto]:'All steps complete. Try the tamper test on the left.'}
+}
+async function show(){const s=sess;let ok=false,out='';
+  try{out=dec.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:s.iv},s.keyB,s.ct));ok=true}catch(e){}
+  render({pubA:s.pubA,pubB:s.pubB,secA:s.secA,secB:s.secB,match:s.secA===s.secB,key:s.keyHex,plain:s.plain,nonce:hex(s.iv),ct:hex(s.ct),ok,out});
+  $('tamper').disabled=eccUpto<6;$('restore').disabled=s.ct===s.orig;
+  if(eccUpto>=6&&!s.logged&&!s.silent){s.logged=true;log('ecc',`ECC${eccMode==='step'?' (step by step)':''}: P-256 exchange, ${enc.encode(s.plain).length}-byte message`)}}
+async function runECC(silent){
+  if(!crypto.subtle){$('steps').innerHTML='<div class="err">Web Crypto is not available in this browser.</div>';return}
+  const gen=()=>crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},true,['deriveBits']);
+  const[A,B]=await Promise.all([gen(),gen()]);
+  const raw=async k=>hex(await crypto.subtle.exportKey('raw',k)),bits=(a,b)=>crypto.subtle.deriveBits({name:'ECDH',public:b},a,256);
+  const[sa,sb]=await Promise.all([bits(A.privateKey,B.publicKey),bits(B.privateKey,A.publicKey)]);
+  const info={name:'HKDF',hash:'SHA-256',salt:new Uint8Array(0),info:enc.encode('modulo ecdh aes-gcm')};
+  const mk=async sec=>{const base=await crypto.subtle.importKey('raw',sec,'HKDF',false,['deriveKey','deriveBits']);
+    return[await crypto.subtle.deriveKey(info,base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']),hex(await crypto.subtle.deriveBits(info,base,256))]};
+  const[keyA,keyHex]=await mk(sa),[keyB]=await mk(sb);
+  const plain=$('msg').value||'(empty message)',iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},keyA,enc.encode(plain));
+  sess={pubA:await raw(A.publicKey),pubB:await raw(B.publicKey),secA:hex(sa),secB:hex(sb),keyHex,keyB,iv,ct,orig:ct,plain,silent:silent===true};
+  eccUpto=eccMode==='step'?1:6;eccDone=true;await show();
+}
+const ecMove=d=>{if(!sess)return;eccUpto=Math.max(1,Math.min(6,eccUpto+d));show()};
+$('ecNext').onclick=()=>ecMove(1);$('ecBack').onclick=()=>ecMove(-1);
+$('ecAll').onclick=()=>{if(sess){eccUpto=6;show()}};
+$('ecReset').onclick=()=>{if(sess){eccUpto=1;show()}};
+function setECCMode(m){eccMode=m;qa('#eccMode button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  $('eccRun').textContent=m==='step'?'Start step by step':'Run key exchange';eccUpto=m==='step'?1:6;if(sess)show()}
+qa('#eccMode button').forEach(b=>b.onclick=()=>setECCMode(b.dataset.m));
+$('eccRun').onclick=()=>runECC();
+$('tamper').onclick=async()=>{const c=new Uint8Array(sess.orig.slice(0));c[0]^=1;sess.ct=c.buffer;await show();log('tamper','Tamper test: GCM rejected the modified ciphertext')};
+$('restore').onclick=async()=>{sess.ct=sess.orig;await show()};
+addEventListener('keydown',e=>{if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;if(e.target.closest&&e.target.closest('input,textarea,select'))return;
+  const r=location.hash.slice(1),d=e.key==='ArrowRight'?1:-1;
+  if(r==='bbs'&&bbsMode==='step')bsMove(d);else if(r==='ecc'&&eccMode==='step')ecMove(d)});
+
+curScene='';route();
+</script>
+
+</body>
+</html>
